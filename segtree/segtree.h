@@ -11,12 +11,9 @@
 #include "segtree-node.h"
 
 // T - type of value in nodes
-// F - function for merge values in node
 template<typename T>
 class Segtree {
 public:
-//    Segtree(T segmentValue, std::size_t segmentSize, std::function<T(T, T)> mergeFunction);
-
     Segtree(std::vector<T>& segment,
             std::function<T(T, T)> mergeFunction) {
         m_mergeFunction = mergeFunction;
@@ -56,7 +53,48 @@ public:
         }
     }
 
-    T Query(std::size_t lBorder, std::size_t rightBorder);
+    virtual T
+    Query(const std::size_t leftBorder, const std::size_t rightBorder, const T startValue) {
+        ssize_t leftBorderInTree = m_tree.size() - m_segmentSize + leftBorder;
+        ssize_t rightBorderInTree = m_tree.size() - m_segmentSize + rightBorder;
+
+        T leftResult;
+        bool isNeutralLeftResult = true;
+
+        T rightResult;
+        bool isNeutralRightResult = true;
+
+        while (leftBorderInTree <= rightBorderInTree) {
+            SegtreeNode<T>* left = &m_tree.at(leftBorderInTree);
+            SegtreeNode<T>* right = &m_tree.at(rightBorderInTree);
+
+            if (!left->IsLeftChild()) {
+                if (isNeutralLeftResult) {
+                    leftResult = left->GetValue();
+                    isNeutralLeftResult = false;
+                } else
+                    leftResult = m_mergeFunction(leftResult, left->GetValue());
+            }
+
+            if (right->IsLeftChild()) {
+                if (isNeutralRightResult) {
+                    rightResult = right->GetValue();
+                    isNeutralRightResult = false;
+                } else
+                    rightResult = m_mergeFunction(rightResult, right->GetValue());
+            }
+
+            leftBorderInTree /= 2;
+            rightBorderInTree = rightBorderInTree / 2 - 1;
+        }
+
+        if (isNeutralLeftResult)
+            return rightResult;
+        else if (isNeutralRightResult)
+            return leftResult;
+        else
+            return m_mergeFunction(leftResult, rightResult);
+    }
 
     T Get(std::size_t pos);
 

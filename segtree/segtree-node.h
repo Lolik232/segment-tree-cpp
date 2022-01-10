@@ -74,6 +74,13 @@ public:
                                                                          m_rightChild(rightChild) {
     }
 
+    bool IsLeftChild() {
+        if (m_parent == nullptr || m_parent->GetLeftChild() != this)
+            return false;
+
+        return true;
+    }
+
     bool IsNeutral() const {
         return m_isNeutral;
     }
