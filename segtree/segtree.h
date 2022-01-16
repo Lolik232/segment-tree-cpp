@@ -7,13 +7,14 @@
 
 #include <functional>
 #include <vector>
+#include <stdexcept>
 
 #include "segtree-node.h"
 
 template<typename T>
 class Segtree {
 public:
-    Segtree(std::vector<T> segment, std::function<T(T, T)> mergeFunction) : m_mergeFunction(mergeFunction) {
+    Segtree(std::vector<T>& segment, std::function<T(T, T)> mergeFunction) : m_mergeFunction(mergeFunction) {
         // init tree
         init(segment.size());
         // copy segment data
@@ -54,7 +55,6 @@ public:
         ssize_t leftBorderIndex = segmentStartPosInTree + leftBorder;
         ssize_t rightBorderIndex = segmentStartPosInTree + rightBorder;
 
-
         T leftResult;
         bool isLeftResultNeutral = true;
 
@@ -65,6 +65,7 @@ public:
             SegtreeNode<T>& left = m_tree.at(leftBorderIndex);
             SegtreeNode<T>& right = m_tree.at(rightBorderIndex);
 
+            // небольшой костыль ;)
             if (!left.isLeftChild()) {
                 if (left.isNeutral() == false && !isLeftResultNeutral)
                     leftResult = m_mergeFunction(leftResult, left.getValue());
@@ -98,9 +99,10 @@ public:
     void set(T value, std::size_t pos) {
         //TODO: throw exception
         if (pos > m_segmentSize)
-            return;
+            throw std::invalid_argument("Pos is bigger than segment size");
 
-        std::size_t posInTree = m_tree.size() - m_segmentSize + pos;
+        std::size_t
+                posInTree = m_tree.size() - m_segmentSize + pos;
 
         SegtreeNode<T>* currentNode = &m_tree.at(posInTree);
         currentNode->setValue(value);
@@ -117,7 +119,11 @@ private:
 
 private:
     void init(std::size_t segmentSize) {
-        //TODO: add check for zero segment size
+        if (segmentSize == 0) {
+            m_tree.resize(0);
+            m_segmentSize = 0;
+        }
+
         m_segmentSize = 1;
         while (m_segmentSize < segmentSize)
             m_segmentSize *= 2;
@@ -127,6 +133,5 @@ private:
         m_tree.resize(treeSize);
     }
 };
-
 
 #endif //SEGTREE_INVERSION_SEGTREE_H

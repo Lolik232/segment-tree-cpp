@@ -116,7 +116,6 @@ public:
     }
 
 private:
-    // TODO: update default value!
     bool m_isNeutral = true;
     T m_value;
 
