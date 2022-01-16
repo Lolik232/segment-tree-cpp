@@ -1,124 +1,132 @@
 //
-// Created by vladv on 09.01.2022.
+// Created by vladv on 14.01.2022.
 //
 
-#ifndef SEGTREE_SEGTREE_H
-#define SEGTREE_SEGTREE_H
+#ifndef SEGTREE_INVERSION_SEGTREE_H
+#define SEGTREE_INVERSION_SEGTREE_H
 
 #include <functional>
 #include <vector>
 
 #include "segtree-node.h"
 
-// T - type of value in nodes
 template<typename T>
 class Segtree {
 public:
-    Segtree(std::vector<T>& segment,
-            std::function<T(T, T)> mergeFunction) {
-        m_mergeFunction = mergeFunction;
-
+    Segtree(std::vector<T> segment, std::function<T(T, T)> mergeFunction) : m_mergeFunction(mergeFunction) {
+        // init tree
         init(segment.size());
-
+        // copy segment data
         ssize_t iWrite = m_tree.size() - m_segmentSize;
         ssize_t iRead = 0;
-        while (iRead < segment.size()) {
-            SegtreeNode<T>* parent = &m_tree.at((iWrite - 1) / 2);
-            m_tree.at(iWrite) = SegtreeNode<T>(segment.at(iRead), iRead, iRead, parent);
-            iWrite++;
-            iRead++;
-        }
-
         while (iWrite < m_tree.size()) {
-            SegtreeNode<T>* parent = &m_tree.at((iWrite - 1) / 2);
-            m_tree.at(iWrite) = SegtreeNode<T>(iRead, iRead, parent);
+            if (iRead < segment.size()) {
+                m_tree.at(iWrite).setValue(segment.at(iRead));
+                iRead++;
+            }
             iWrite++;
-            iRead++;
         }
-
+        // create tree
         iWrite = m_tree.size() - m_segmentSize - 1;
-
         while (iWrite >= 0) {
-            SegtreeNode<T>* leftChild = &m_tree.at(iWrite * 2 + 1);
-            SegtreeNode<T>* rightChild = &m_tree.at(iWrite * 2 + 2);
+            std::size_t leftChildIndex = iWrite * 2 + 1;
+            std::size_t rightChildIndex = iWrite * 2 + 2;
 
-            m_tree.at(iWrite) = SegtreeNode<T>(leftChild->GetLeftBorder(),
-                                               rightChild->GetRightBorder(),
-                                               leftChild, rightChild, m_mergeFunction);
+            SegtreeNode<T>& leftChild = m_tree.at(leftChildIndex);
+            SegtreeNode<T>& rightChild = m_tree.at(rightChildIndex);
 
-            leftChild->SetParent(&m_tree.at(iWrite));
-            rightChild->SetParent(&m_tree.at(iWrite));
+            SegtreeNode<T>& currentNode = m_tree.at(iWrite);
+
+            currentNode.setLeftChild(&leftChild);
+            currentNode.setRightChild(&rightChild);
+
+            leftChild.setParent(&currentNode);
+            rightChild.setParent(&currentNode);
+
+            currentNode.updateValue(m_mergeFunction);
 
             iWrite--;
         }
     }
 
-    virtual T
-    Query(const std::size_t leftBorder, const std::size_t rightBorder, const T startValue) {
-        ssize_t leftBorderInTree = m_tree.size() - m_segmentSize + leftBorder;
-        ssize_t rightBorderInTree = m_tree.size() - m_segmentSize + rightBorder;
+    virtual T query(std::size_t leftBorder, std::size_t rightBorder) {
+        ssize_t segmentStartPosInTree = m_tree.size() - m_segmentSize;
+        ssize_t leftBorderIndex = segmentStartPosInTree + leftBorder;
+        ssize_t rightBorderIndex = segmentStartPosInTree + rightBorder;
+
 
         T leftResult;
-        bool isNeutralLeftResult = true;
+        bool isLeftResultNeutral = true;
 
         T rightResult;
-        bool isNeutralRightResult = true;
+        bool isRightResultNeutral = true;
 
-        while (leftBorderInTree <= rightBorderInTree) {
-            SegtreeNode<T>* left = &m_tree.at(leftBorderInTree);
-            SegtreeNode<T>* right = &m_tree.at(rightBorderInTree);
+        while (leftBorderIndex <= rightBorderIndex) {
+            SegtreeNode<T>& left = m_tree.at(leftBorderIndex);
+            SegtreeNode<T>& right = m_tree.at(rightBorderIndex);
 
-            if (!left->IsLeftChild()) {
-                if (isNeutralLeftResult) {
-                    leftResult = left->GetValue();
-                    isNeutralLeftResult = false;
-                } else
-                    leftResult = m_mergeFunction(leftResult, left->GetValue());
+            if (!left.isLeftChild()) {
+                if (left.isNeutral() == false && !isLeftResultNeutral)
+                    leftResult = m_mergeFunction(leftResult, left.getValue());
+                else if (left.isNeutral() == false) {
+                    leftResult = left.getValue();
+                    isLeftResultNeutral = false;
+                }
             }
 
-            if (right->IsLeftChild()) {
-                if (isNeutralRightResult) {
-                    rightResult = right->GetValue();
-                    isNeutralRightResult = false;
-                } else
-                    rightResult = m_mergeFunction(rightResult, right->GetValue());
+            if (right.isLeftChild()) {
+                if (right.isNeutral() == false && !isRightResultNeutral)
+                    rightResult = m_mergeFunction(rightResult, right.getValue());
+                else if (left.isNeutral() == false) {
+                    rightResult = right.getValue();
+                    isRightResultNeutral = false;
+                }
             }
 
-            leftBorderInTree /= 2;
-            rightBorderInTree = rightBorderInTree / 2 - 1;
+            leftBorderIndex /= 2;
+            rightBorderIndex = rightBorderIndex / 2 - 1;
         }
 
-        if (isNeutralLeftResult)
+        if (isLeftResultNeutral)
             return rightResult;
-        else if (isNeutralRightResult)
+        else if (isRightResultNeutral)
             return leftResult;
         else
             return m_mergeFunction(leftResult, rightResult);
     }
 
-    T Get(std::size_t pos);
+    void set(T value, std::size_t pos) {
+        //TODO: throw exception
+        if (pos > m_segmentSize)
+            return;
 
-    void Set(T value, std::size_t pos);
+        std::size_t posInTree = m_tree.size() - m_segmentSize + pos;
+
+        SegtreeNode<T>* currentNode = &m_tree.at(posInTree);
+        currentNode->setValue(value);
+
+        while ((currentNode = currentNode->getParent()) != nullptr)
+            currentNode->updateValue(m_mergeFunction);
+    }
 
 private:
-    std::function<T(T, T)> m_mergeFunction;
     std::vector<SegtreeNode<T>> m_tree;
     std::size_t m_segmentSize;
 
-    void init(std::size_t segmentSize) {
-        if (segmentSize <= 0)
-            throw std::invalid_argument("Segment size must be positive");
+    std::function<T(T, T)> m_mergeFunction;
 
+private:
+    void init(std::size_t segmentSize) {
+        //TODO: add check for zero segment size
         m_segmentSize = 1;
         while (m_segmentSize < segmentSize)
             m_segmentSize *= 2;
 
         std::size_t treeSize = m_segmentSize * 2 - 1;
 
-//        m_tree.reserve(treeSize);
         m_tree.resize(treeSize);
     }
 };
 
 
-#endif //SEGTREE_SEGTREE_H
+#endif //SEGTREE_INVERSION_SEGTREE_H

@@ -1,163 +1,128 @@
 //
-// Created by vladv on 09.01.2022.
+// Created by vladv on 13.01.2022.
 //
 
-#ifndef SEGTREE_SEGTREE_NODE_H
-#define SEGTREE_SEGTREE_NODE_H
+#ifndef SEGTREE_INVERSION_SEGTREE_NODE_H
+#define SEGTREE_INVERSION_SEGTREE_NODE_H
 
 #include <functional>
-#include <vector>
 
+// T - type of data in node
 template<typename T>
 class SegtreeNode {
 public:
     SegtreeNode() = default;
 
-    SegtreeNode(std::size_t leftBorder, std::size_t rightBorder) : m_isNeutral(true),
-                                                                   m_leftBorder(leftBorder),
-                                                                   m_rightBorder(rightBorder) {}
+    explicit SegtreeNode(SegtreeNode<T>* parent) : m_parent(parent) {}
 
-    SegtreeNode(std::size_t leftBorder, std::size_t rightBorder,
-                SegtreeNode<T>* parent) : SegtreeNode(leftBorder, rightBorder) {
-        m_parent = parent;
-    }
-
-    SegtreeNode(std::size_t leftBorder, std::size_t rightBorder,
-                SegtreeNode<T>* leftChild, SegtreeNode<T>* rightChild,
-                std::function<T(T, T)> mergeFunction) : m_leftBorder(leftBorder),
-                                                        m_rightBorder(rightBorder),
-                                                        m_leftChild(leftChild),
-                                                        m_rightChild(rightChild) {
-        if (leftChild->IsNeutral() && rightChild->IsNeutral())
-            SetNeutral(true);
-        else if (leftChild->IsNeutral())
-            SetValue(rightChild->GetValue());
-        else if (rightChild->IsNeutral())
-            SetValue(leftChild->GetValue());
-        else {
-            T newValue = mergeFunction(leftChild->GetValue(), rightChild->GetValue());
-            SetValue(newValue);
+    SegtreeNode(SegtreeNode<T>* leftChild, SegtreeNode<T>* rightChild, std::function<T(T, T)> compareValuesFunc)
+            : m_leftChild(leftChild),
+              m_rightChild(rightChild) {
+        if (leftChild->isNeutral() && rightChild->isNeutral()) {
+            return;
         }
+
+        if (leftChild->isNeutral())
+            m_value = rightChild->getValue();
+        else if (rightChild->isNeutral())
+            m_value = leftChild->getValue();
+        else
+            m_value = compareValuesFunc(leftChild->getValue(), rightChild->getValue());
+
+        m_isNeutral = false;
     }
 
-    SegtreeNode(std::size_t leftBorder, std::size_t rightBorder, SegtreeNode<T>* parent,
-                SegtreeNode<T>* leftChild, SegtreeNode<T>* rightChild,
-                std::function<T(T, T)> mergeFunction)
-            : SegtreeNode(leftBorder, rightBorder, leftChild, rightChild, mergeFunction) {
+    SegtreeNode(SegtreeNode<T>* parent, SegtreeNode<T>* leftChild, SegtreeNode<T>* rightChild,
+                std::function<T(T, T)> compareValuesFunc)
+            : SegtreeNode(leftChild, rightChild, compareValuesFunc) {
         m_parent = parent;
     }
 
-    SegtreeNode(T value, std::size_t leftBorder, std::size_t rightBorder)
-            : m_value(value), m_leftBorder(leftBorder), m_rightBorder(rightBorder) {
+    explicit SegtreeNode(T value) : m_value(value), m_isNeutral(false) {}
+
+    SegtreeNode(T value, SegtreeNode<T>* parent) : m_value(value),
+                                                   m_parent(parent),
+                                                   m_isNeutral(false) {}
+
+    SegtreeNode(T value, SegtreeNode<T>* leftChild, SegtreeNode<T>* rightChild) : m_value(value),
+                                                                                  m_leftChild(leftChild),
+                                                                                  m_rightChild(rightChild),
+                                                                                  m_isNeutral(false) {}
+
+    SegtreeNode(T value, SegtreeNode<T>* parent, SegtreeNode<T>* leftChild, SegtreeNode<T>* rightChild) : m_value(
+            value), m_parent(parent), m_leftChild(leftChild), m_rightChild(rightChild), m_isNeutral(false) {}
+
+    bool isNeutral() {
+        return m_isNeutral;
+    };
+
+    T getValue() const {
+        return m_value;
     }
 
-
-    SegtreeNode(T value, std::size_t leftBorder, std::size_t rightBorder,
-                SegtreeNode<T>* parent) : m_value(value), m_leftBorder(leftBorder),
-                                          m_rightBorder(rightBorder), m_parent(parent) {
+    void setValue(T value) {
+        m_value = value;
+        m_isNeutral = false;
     }
 
-    SegtreeNode(T value, std::size_t leftBorder, std::size_t rightBorder,
-                SegtreeNode<T>* leftChild, SegtreeNode<T>* rightChild) : m_value(value),
-                                                                         m_leftBorder(leftBorder),
-                                                                         m_rightBorder(rightBorder),
-                                                                         m_leftChild(leftChild),
-                                                                         m_rightChild(rightChild) {
+    void updateValue(std::function<T(T, T)> mergeFunction) {
+        if ((m_leftChild == nullptr || m_leftChild->isNeutral()) &&
+            (m_rightChild == nullptr || m_rightChild->isNeutral()))
+            return;
+        else if (m_leftChild == nullptr || m_leftChild->isNeutral())
+            setValue(m_rightChild->getValue());
+        else if (m_rightChild == nullptr || m_rightChild->isNeutral())
+            setValue(m_leftChild->getValue());
+        else
+            setValue(mergeFunction(m_leftChild->getValue(), m_rightChild->getValue()));
     }
 
-    SegtreeNode(T value, std::size_t leftBorder, std::size_t rightBorder, SegtreeNode<T>* parent,
-                SegtreeNode<T>* leftChild, SegtreeNode<T>* rightChild) : m_value(value),
-                                                                         m_leftBorder(leftBorder),
-                                                                         m_rightBorder(rightBorder),
-                                                                         m_parent(parent),
-                                                                         m_leftChild(leftChild),
-                                                                         m_rightChild(rightChild) {
+    SegtreeNode<T>* getParent() const {
+        return m_parent;
     }
 
-    bool IsLeftChild() {
-        if (m_parent == nullptr || m_parent->GetLeftChild() != this)
+    void setParent(SegtreeNode<T>* parent) {
+        m_parent = parent;
+    }
+
+    SegtreeNode<T>* getLeftChild() const {
+        return m_leftChild;
+    }
+
+    void setLeftChild(SegtreeNode<T>* leftChild) {
+        m_leftChild = leftChild;
+    }
+
+    SegtreeNode<T>* getRightChild() const {
+        return m_rightChild;
+    }
+
+    void setRightChild(SegtreeNode<T>* rightChild) {
+        m_rightChild = rightChild;
+    }
+
+    bool isLeftChild() {
+        if (m_parent == nullptr || m_parent->getLeftChild() != this)
             return false;
 
         return true;
     }
 
-    bool IsNeutral() const {
-        return m_isNeutral;
-    }
+    bool isRightChild() {
+        if (m_parent == nullptr || m_parent->getRightChild() != this)
+            return false;
 
-    bool SetNeutral(bool value) {
-        m_isNeutral = value;
-    }
-
-    T GetValue() const {
-        return m_value;
-    }
-
-    void SetValue(T value) {
-        m_value = value;
-    }
-
-    std::size_t GetLeftBorder() const {
-        return m_leftBorder;
-    }
-
-    void SetLeftBorder(std::size_t leftBorder) {
-        m_leftBorder = leftBorder;
-    }
-
-    std::size_t GetRightBorder() const {
-        return m_rightBorder;
-    }
-
-    void SetRightBorder(std::size_t rightBorder) {
-        m_rightBorder = rightBorder;
-    }
-
-    SegtreeNode<T>* GetParent() const {
-        return m_parent;
-    }
-
-    void SetParent(SegtreeNode<T>* parent) {
-        m_parent = parent;
-    }
-
-    SegtreeNode<T>* GetLeftChild() const {
-        return m_leftChild;
-    }
-
-    SegtreeNode<T>* GetRightChild() const {
-        return m_rightChild;
-    }
-
-    SegtreeNode<T>& operator=(const SegtreeNode<T>& otherNode) {
-        if (this == &otherNode)
-            return *this;
-
-        m_isNeutral = otherNode.IsNeutral();
-
-        SetValue(otherNode.GetValue());
-        SetParent(otherNode.GetParent());
-
-        m_leftChild = otherNode.m_leftChild;
-        m_rightChild = otherNode.m_rightChild;
-
-        SetLeftBorder(otherNode.GetLeftBorder());
-        SetRightBorder(otherNode.GetRightBorder());
-
-        return *this;
+        return true;
     }
 
 private:
-    bool m_isNeutral = false;
-
+    // TODO: update default value!
+    bool m_isNeutral = true;
     T m_value;
-
-    std::size_t m_leftBorder;
-    std::size_t m_rightBorder;
 
     SegtreeNode<T>* m_parent = nullptr;
     SegtreeNode<T>* m_leftChild = nullptr;
     SegtreeNode<T>* m_rightChild = nullptr;
 };
 
-#endif //SEGTREE_SEGTREE_NODE_H
+#endif //SEGTREE_INVERSION_SEGTREE_NODE_H

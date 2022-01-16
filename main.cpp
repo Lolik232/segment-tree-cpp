@@ -1,25 +1,43 @@
 #include <iostream>
 #include <vector>
-#include <functional>
 
 #include "segtree/segtree.h"
 
-
-int sum(int a, int b) {
+long long sum(long long a, long long b) {
     return a + b;
 }
 
-int min2(int a, int b) {
+long long min2(long long a, long long b) {
     return a < b ? a : b;
 }
 
 int main() {
+    int n, m;
+    std::cin >> n >> m;
 
+    std::vector<long long> segment(n);
+    for (long long& a: segment) {
+        std::cin >> a;
+    }
 
-    std::vector<int> segment = {4, 1, 4, 2, 6, 8};
+    Segtree<long long> segmentTree(segment, min2);
 
-    Segtree<int> segmentTree = Segtree<int>(segment, sum);
+    for (int i = 0; i < m; i++) {
+        int currentOperation;
+        std::cin >> currentOperation;
 
-    std::cout << segmentTree.Query(0, 5, 0);
+        if (currentOperation == 1) {
+            long long value, pos;
+            std::cin >> pos >> value;
+            segmentTree.set(value, pos);
+        } else {
+            int left, right;
+            std::cin >> left >> right;
+            right -= 1;
+
+            std::cout << segmentTree.query(left, right) << '\n';
+        }
+    }
+
     return 0;
 }
