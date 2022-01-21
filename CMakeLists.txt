@@ -3,4 +3,4 @@ project(segtree_inversion)
 
 set(CMAKE_CXX_STANDARD 23)
 
-add_executable(segtree_inversion main.cpp segtree/segtree-node.h segtree/segtree.h)
+add_executable(segtree_inversion main.cpp segtree/segtree-node.h segtree/segtree.h segtree/segtree-seg-operation.h segtree/segtreebase.h)
